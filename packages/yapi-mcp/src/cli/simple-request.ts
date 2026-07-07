@@ -81,7 +81,7 @@ export async function runSimpleRequest(
         return 2;
       }
     } else {
-      console.error("missing email/password for global auth");
+      console.error("missing email/password for global/ldap auth");
       return 2;
     }
   }
