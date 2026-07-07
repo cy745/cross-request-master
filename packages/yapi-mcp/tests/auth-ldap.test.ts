@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, test } from "node:test";
+import { afterEach, describe, test } from "node:test";
 import axios from "axios";
 import { YApiAuthService } from "../src/services/yapi/auth";
 import { YApiAuthCache } from "../src/services/yapi/authCache";
