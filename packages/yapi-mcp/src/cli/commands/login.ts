@@ -21,6 +21,7 @@ export async function runLogin(options: Options): Promise<number> {
   let password = options.password || config.password || "";
   const projectId = options.projectId || config.project_id || "";
   const token = options.token || config.token || "";
+  const useLdap = Boolean(options.ldap) || config.auth_mode === "ldap";
   let updated = false;
 
   if (!baseUrl) {
@@ -32,7 +33,7 @@ export async function runLogin(options: Options): Promise<number> {
     updated = true;
   }
 
-  const useBrowserLogin = Boolean(options.browser) || !email || !password;
+  const useBrowserLogin = Boolean(options.browser) || (!email || !password) && !useLdap;
   if (useBrowserLogin) {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       console.error("browser login requires interactive terminal");
@@ -74,17 +75,18 @@ export async function runLogin(options: Options): Promise<number> {
     const authService = new YApiAuthService(baseUrl, email, password, "warn", {
       timeoutMs: options.timeout || 30000,
     });
-    await authService.getCookieHeaderWithLogin({ forceLogin: true });
+    await authService.getCookieHeaderWithLogin({ forceLogin: true, useLdap });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     return 2;
   }
 
-  const shouldWriteConfig = updated || !fs.existsSync(configPath) || config.auth_mode !== "global";
+  const newAuthMode = useLdap ? "ldap" : "global";
+  const shouldWriteConfig = updated || !fs.existsSync(configPath) || config.auth_mode !== newAuthMode;
   if (shouldWriteConfig) {
     const mergedConfig: Record<string, string> = {
       base_url: baseUrl,
-      auth_mode: "global",
+      auth_mode: newAuthMode,
       email,
       password,
       token,
@@ -93,6 +95,6 @@ export async function runLogin(options: Options): Promise<number> {
     writeConfig(configPath, mergedConfig);
   }
 
-  console.log("login success (cookie cached in ~/.yapi-mcp/auth-*.json)");
+  console.log(`login success (${useLdap ? "LDAP " : ""}cookie cached in ~/.yapi-mcp/auth-*.json)`);
   return 0;
 }

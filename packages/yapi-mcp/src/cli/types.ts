@@ -7,6 +7,7 @@ export type Options = {
   token?: string;
   projectId?: string;
   authMode?: string;
+  ldap?: boolean;
   browser?: boolean;
   email?: string;
   password?: string;

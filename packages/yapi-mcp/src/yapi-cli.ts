@@ -48,6 +48,7 @@ function toOptions(argv: Record<string, unknown>): Options {
     token: argv.token as string | undefined,
     projectId: (argv.projectId || argv["project-id"]) as string | undefined,
     authMode: (argv.authMode || argv["auth-mode"]) as string | undefined,
+    ldap: argv.ldap as boolean | undefined,
     browser: argv.browser as boolean | undefined,
     email: argv.email as string | undefined,
     password: argv.password as string | undefined,
@@ -283,7 +284,8 @@ export async function main(rawArgs = hideBin(process.argv)): Promise<number> {
           .option("base-url", { type: "string", describe: "YApi base URL" })
           .option("login-url", { type: "string", describe: "page URL for browser login" })
           .option("browser", { type: "boolean", describe: "force browser login" })
-          .option("email", { type: "string", describe: "login email" })
+          .option("ldap", { type: "boolean", describe: "use LDAP login endpoint" })
+          .option("email", { type: "string", describe: "login email (or LDAP username)" })
           .option("password", { type: "string", describe: "login password" })
           .option("timeout", { type: "number", describe: "request timeout in ms", default: 30000 })
           .option("token", { type: "string", describe: "project token" })
@@ -690,9 +692,10 @@ export async function main(rawArgs = hideBin(process.argv)): Promise<number> {
     .option("base-url", { type: "string", describe: "YApi base URL" })
     .option("token", { type: "string", describe: "project token (supports projectId:token)" })
     .option("project-id", { type: "string", describe: "select token for project" })
-    .option("auth-mode", { type: "string", describe: "token or global" })
-    .option("email", { type: "string", describe: "login email for global mode" })
-    .option("password", { type: "string", describe: "login password for global mode" })
+    .option("auth-mode", { type: "string", describe: "token, global, or ldap" })
+    .option("ldap", { type: "boolean", describe: "shortcut for --auth-mode ldap" })
+    .option("email", { type: "string", describe: "login email for global/ldap mode" })
+    .option("password", { type: "string", describe: "login password for global/ldap mode" })
     .option("cookie", { type: "string", describe: "cookie for global mode" })
     .option("token-param", { type: "string", describe: "token query param name", default: "token" })
     .option("timeout", { type: "number", describe: "request timeout in ms", default: 30000 })

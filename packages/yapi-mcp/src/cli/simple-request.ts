@@ -33,6 +33,9 @@ export async function runSimpleRequest(
   const token = resolveToken(rawToken, projectId);
 
   let authMode = (options.authMode || config.auth_mode || "").trim().toLowerCase();
+  if (options.ldap && !authMode) {
+    authMode = "ldap";
+  }
   if (!authMode) {
     authMode = token
       ? "token"
@@ -40,8 +43,8 @@ export async function runSimpleRequest(
         ? "global"
         : "token";
   }
-  if (authMode !== "token" && authMode !== "global") {
-    console.error("invalid --auth-mode (use token or global)");
+  if (authMode !== "token" && authMode !== "global" && authMode !== "ldap") {
+    console.error("invalid --auth-mode (use token, global, or ldap)");
     return 2;
   }
 
@@ -52,26 +55,27 @@ export async function runSimpleRequest(
 
   const email = options.email || config.email || "";
   const password = options.password || config.password || "";
+  const useLdap = authMode === "ldap";
   const authService =
-    authMode === "global"
+    authMode === "global" || useLdap
       ? new YApiAuthService(baseUrl, email || "", password || "", "warn", {
           timeoutMs: options.timeout || 30000,
         })
       : null;
   const canRelogin =
-    authMode === "global" &&
+    (authMode === "global" || useLdap) &&
     Boolean(authService) &&
     Boolean(email) &&
     Boolean(password) &&
     !options.cookie;
 
-  if (!headers.Cookie && authMode === "global") {
+  if (!headers.Cookie && (authMode === "global" || useLdap)) {
     const cachedCookie = authService?.getCachedCookieHeader();
     if (cachedCookie) {
       headers.Cookie = cachedCookie;
     } else if (email && password && authService) {
       try {
-        headers.Cookie = await authService.getCookieHeaderWithLogin();
+        headers.Cookie = await authService.getCookieHeaderWithLogin({ useLdap });
       } catch (error) {
         console.error(error instanceof Error ? error.message : String(error));
         return 2;
@@ -135,7 +139,7 @@ export async function runSimpleRequest(
 
   if (canRelogin && looksLikeAuthError(result.response.status, result.json)) {
     try {
-      headers.Cookie = await authService!.getCookieHeaderWithLogin({ forceLogin: true });
+      headers.Cookie = await authService!.getCookieHeaderWithLogin({ forceLogin: true, useLdap });
       result = await sendOnce();
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));

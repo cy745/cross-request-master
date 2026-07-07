@@ -166,10 +166,59 @@ export class YApiAuthService {
   }
 
   /**
-   * 获取可直接用于请求头的 Cookie（必要时会自动登录刷新）。
+   * LDAP 登录：调用 /api/user/login_by_ldap 获取 Cookie。
    */
-  async getCookieHeaderWithLogin(options: { forceLogin?: boolean } = {}): Promise<string> {
-    const session = await this.login(Boolean(options.forceLogin));
+  async loginByLdap(force: boolean = false): Promise<YApiSessionCookie> {
+    const cached = this.cache.loadSession();
+    if (!force && this.isSessionValid(cached)) return cached;
+
+    try {
+      this.logger.info("正在通过 LDAP 登录 YApi 以刷新全局登录态（Cookie）...");
+      const response = await axios.post(
+        `${this.baseUrl}/api/user/login_by_ldap`,
+        { email: this.email, password: this.password },
+        {
+          headers: { "Content-Type": "application/json;charset=UTF-8" },
+          timeout: this.httpTimeoutMs,
+          maxContentLength: this.httpMaxContentLength,
+          maxBodyLength: this.httpMaxBodyLength,
+        },
+      );
+
+      const setCookie = response.headers["set-cookie"] as string[] | undefined;
+      const yapiToken = pickCookieValue(setCookie, "_yapi_token");
+      const yapiUid = pickCookieValue(setCookie, "_yapi_uid");
+      const expiresAt = pickCookieExpiresAt(setCookie, "_yapi_token");
+
+      if (!yapiToken) {
+        const msg = (response.data as any)?.errmsg || "LDAP 登录失败，未返回 _yapi_token";
+        throw new Error(msg);
+      }
+
+      const session: YApiSessionCookie = {
+        yapiToken,
+        yapiUid,
+        expiresAt,
+        updatedAt: Date.now(),
+      };
+      this.cache.saveSession(session);
+      return session;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) {
+        throw new Error(error.response.data?.errmsg || "LDAP 登录失败");
+      }
+      throw error instanceof Error ? error : new Error("LDAP 登录失败");
+    }
+  }
+
+  /**
+   * 获取可直接用于请求头的 Cookie（必要时会自动登录刷新）。
+   * @param options.useLdap - 是否使用 LDAP 登录端点
+   */
+  async getCookieHeaderWithLogin(options: { forceLogin?: boolean; useLdap?: boolean } = {}): Promise<string> {
+    const session = options.useLdap
+      ? await this.loginByLdap(Boolean(options.forceLogin))
+      : await this.login(Boolean(options.forceLogin));
     return this.getCookieHeader(session);
   }
 

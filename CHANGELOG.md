@@ -7,6 +7,10 @@
 
 ## [未发布]
 
+### 新增
+
+- **yapi-mcp: LDAP 登录支持** — 新增 `--ldap` 标志和 `auth-mode: ldap`，登录时调用 `/api/user/login_by_ldap` 端点，适用于 YApi 配置了 LDAP 认证的场景。支持 `yapi login --ldap`、`yapi --path ... --ldap` 以及 `yapi config init --auth-mode ldap` 三种使用方式。缓存机制与 global 模式一致，Cookie 写入 `~/.yapi-mcp/auth-*.json`。
+
 ## [4.6.1] - 2026-05-15
 
 ### 修复

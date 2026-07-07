@@ -12,12 +12,12 @@ function resolveAuthMode(
   explicit: string,
   existing: Record<string, string>,
   merged: Record<string, string>,
-): "token" | "global" | null {
+): "token" | "global" | "ldap" | null {
   const normalized = String(explicit || existing.auth_mode || "").trim().toLowerCase();
   if (!normalized) {
     return merged.token ? "token" : "global";
   }
-  if (normalized === "token" || normalized === "global") return normalized;
+  if (normalized === "token" || normalized === "global" || normalized === "ldap") return normalized as "token" | "global" | "ldap";
   return null;
 }
 
@@ -60,7 +60,7 @@ export async function runConfig(action: string, options: Options): Promise<numbe
 
   const authMode = resolveAuthMode(options.authMode || "", existing, merged);
   if (!authMode) {
-    console.error("invalid --auth-mode (use token or global)");
+    console.error("invalid --auth-mode (use token, global, or ldap)");
     return 2;
   }
 
@@ -77,6 +77,11 @@ export async function runConfig(action: string, options: Options): Promise<numbe
   if (authMode === "global" && !merged.password) {
     console.log(
       "Global auth configured without saved password. Run `yapi login --base-url <url> --browser` once to sync cookie, or rerun with --password to enable password relogin.",
+    );
+  }
+  if (authMode === "ldap" && !merged.password) {
+    console.log(
+      "LDAP auth configured. Run `yapi login --ldap` to authenticate and cache cookie.",
     );
   }
   if (authMode === "token" && !merged.token) {
